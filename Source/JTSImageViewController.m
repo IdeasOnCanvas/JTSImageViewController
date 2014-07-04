@@ -129,6 +129,7 @@ typedef struct {
         _currentSnapshotRotationTransform = CGAffineTransformIdentity;
         _mode = mode;
         _backgroundStyle = backgroundStyle;
+        _dismissalOptions = JTSImageViewControllerDismissalOption_Flick | JTSImageViewControllerDismissalOption_SingleTap;
         if (_mode == JTSImageViewControllerMode_Image) {
             [self setupImageAndDownloadIfNecessary:imageInfo];
         }
@@ -234,6 +235,9 @@ typedef struct {
     else if (self.mode == JTSImageViewControllerMode_AltText) {
         [self viewDidLoadForAltTextMode];
     }
+    
+    // update enabled-state of dismissal gesture recognizers
+    self.dismissalOptions = self.dismissalOptions;
 }
 
 - (void)viewDidLayoutSubviews {
@@ -531,71 +535,71 @@ typedef struct {
         // for the JTSImageInfo.
         //
         dispatch_async(dispatch_get_main_queue(), ^{
-        dispatch_async(dispatch_get_main_queue(), ^{
-        
-            [UIView
-             animateWithDuration:duration
-             delay:0
-             options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut
-             animations:^{
-                 
-                 _flags.isTransitioningFromInitialModalToInteractiveState = YES;
-                 
-                 if ([UIApplication sharedApplication].jts_usesViewControllerBasedStatusBarAppearance) {
-                     [weakSelf setNeedsStatusBarAppearanceUpdate];
-                 } else {
-                     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
-                 }
-                 
-                 CGFloat scaling = JTSImageViewController_MinimumBackgroundScaling;
-                 weakSelf.snapshotView.transform = CGAffineTransformConcat(weakSelf.snapshotView.transform, CGAffineTransformMakeScale(scaling, scaling));
-                 
-                 if (weakSelf.backgroundStyle == JTSImageViewControllerBackgroundStyle_ScaledDimmedBlurred) {
-                     [weakSelf.blurredSnapshotView setAlpha:1];
-                 }
-                 
-                 [weakSelf addMotionEffectsToSnapshotView];
-                 [weakSelf.blackBackdrop setAlpha:self.alphaForBackgroundDimmingOverlay];
-                 
-                 if (mustRotateDuringTransition) {
-                     [weakSelf.imageView setTransform:CGAffineTransformIdentity];
-                 }
-                 
-                 CGRect endFrameForImageView;
-                 if (weakSelf.image) {
-                     endFrameForImageView = [weakSelf resizedFrameForAutorotatingImageView:weakSelf.image.size];
-                 } else {
-                     endFrameForImageView = [weakSelf resizedFrameForAutorotatingImageView:weakSelf.imageInfo.referenceRect.size];
-                 }
-                 [weakSelf.imageView setFrame:endFrameForImageView];
-                 
-                 CGPoint endCenterForImageView = CGPointMake(weakSelf.view.bounds.size.width/2.0f, weakSelf.view.bounds.size.height/2.0f);
-                 [weakSelf.imageView setCenter:endCenterForImageView];
-                 
-                 if (weakSelf.image == nil) {
-                     [weakSelf.progressContainer setAlpha:1.0f];
-                 }
-                 
-             } completion:^(BOOL finished) {
-                 
-                 _flags.isManuallyResizingTheScrollViewFrame = YES;
-                 [weakSelf.scrollView setFrame:weakSelf.view.bounds];
-                 _flags.isManuallyResizingTheScrollViewFrame = NO;
-                 [weakSelf.scrollView addSubview:weakSelf.imageView];
-                 
-                 _flags.isTransitioningFromInitialModalToInteractiveState = NO;
-                 _flags.isAnimatingAPresentationOrDismissal = NO;
-                 _flags.isPresented = YES;
-                 
-                 [weakSelf updateScrollViewAndImageViewForCurrentMetrics];
-                 
-                 if (_flags.imageDownloadFailed) {
-                     [weakSelf dismiss:YES];
-                 } else {
-                     [weakSelf.view setUserInteractionEnabled:YES];
-                 }
-             }];
-        });
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                [UIView
+                 animateWithDuration:duration
+                 delay:0
+                 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut
+                 animations:^{
+                     
+                     _flags.isTransitioningFromInitialModalToInteractiveState = YES;
+                     
+                     if ([UIApplication sharedApplication].jts_usesViewControllerBasedStatusBarAppearance) {
+                         [weakSelf setNeedsStatusBarAppearanceUpdate];
+                     } else {
+                         [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationFade];
+                     }
+                     
+                     CGFloat scaling = JTSImageViewController_MinimumBackgroundScaling;
+                     weakSelf.snapshotView.transform = CGAffineTransformConcat(weakSelf.snapshotView.transform, CGAffineTransformMakeScale(scaling, scaling));
+                     
+                     if (weakSelf.backgroundStyle == JTSImageViewControllerBackgroundStyle_ScaledDimmedBlurred) {
+                         [weakSelf.blurredSnapshotView setAlpha:1];
+                     }
+                     
+                     [weakSelf addMotionEffectsToSnapshotView];
+                     [weakSelf.blackBackdrop setAlpha:self.alphaForBackgroundDimmingOverlay];
+                     
+                     if (mustRotateDuringTransition) {
+                         [weakSelf.imageView setTransform:CGAffineTransformIdentity];
+                     }
+                     
+                     CGRect endFrameForImageView;
+                     if (weakSelf.image) {
+                         endFrameForImageView = [weakSelf resizedFrameForAutorotatingImageView:weakSelf.image.size];
+                     } else {
+                         endFrameForImageView = [weakSelf resizedFrameForAutorotatingImageView:weakSelf.imageInfo.referenceRect.size];
+                     }
+                     [weakSelf.imageView setFrame:endFrameForImageView];
+                     
+                     CGPoint endCenterForImageView = CGPointMake(weakSelf.view.bounds.size.width/2.0f, weakSelf.view.bounds.size.height/2.0f);
+                     [weakSelf.imageView setCenter:endCenterForImageView];
+                     
+                     if (weakSelf.image == nil) {
+                         [weakSelf.progressContainer setAlpha:1.0f];
+                     }
+                     
+                 } completion:^(BOOL finished) {
+                     
+                     _flags.isManuallyResizingTheScrollViewFrame = YES;
+                     [weakSelf.scrollView setFrame:weakSelf.view.bounds];
+                     _flags.isManuallyResizingTheScrollViewFrame = NO;
+                     [weakSelf.scrollView addSubview:weakSelf.imageView];
+                     
+                     _flags.isTransitioningFromInitialModalToInteractiveState = NO;
+                     _flags.isAnimatingAPresentationOrDismissal = NO;
+                     _flags.isPresented = YES;
+                     
+                     [weakSelf updateScrollViewAndImageViewForCurrentMetrics];
+                     
+                     if (_flags.imageDownloadFailed) {
+                         [weakSelf dismiss:YES];
+                     } else {
+                         [weakSelf.view setUserInteractionEnabled:YES];
+                     }
+                 }];
+            });
         });
     }];
 }
@@ -822,6 +826,18 @@ typedef struct {
 
 #pragma mark - Dismissal
 
+- (void)setDismissalOptions:(JTSImageViewControllerDismissalOptions)dismissalOptions
+{
+    _dismissalOptions = dismissalOptions;
+    
+    BOOL flickEnabled = (dismissalOptions & JTSImageViewControllerDismissalOption_Flick) == JTSImageViewControllerDismissalOption_Flick;
+    BOOL tapEnabled = (dismissalOptions & JTSImageViewControllerDismissalOption_SingleTap) == JTSImageViewControllerDismissalOption_SingleTap;
+    
+    self.panRecognizer.enabled = flickEnabled;
+    self.singleTapperPhoto.enabled = tapEnabled;
+    self.singleTapperText.enabled = tapEnabled;
+}
+
 - (void)dismissByCollapsingImageBackToOriginalPosition {
     
     [self.view setUserInteractionEnabled:NO];
@@ -853,70 +869,70 @@ typedef struct {
     // wouldn't work under certain scrolling conditions, so it has to be an ugly
     // two runloops ahead.
     dispatch_async(dispatch_get_main_queue(), ^{
-    dispatch_async(dispatch_get_main_queue(), ^{
-        
-        CGFloat duration = JTSImageViewController_TransitionAnimationDuration;
-        if (USE_DEBUG_SLOW_ANIMATIONS == 1) {
-            duration *= 4;
-        }
-        
-        [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut animations:^{
+        dispatch_async(dispatch_get_main_queue(), ^{
             
-            weakSelf.snapshotView.transform = weakSelf.currentSnapshotRotationTransform;
-            [weakSelf removeMotionEffectsFromSnapshotView];
-            [weakSelf.blackBackdrop setAlpha:0];
-            
-            if (weakSelf.backgroundStyle == JTSImageViewControllerBackgroundStyle_ScaledDimmedBlurred) {
-                [weakSelf.blurredSnapshotView setAlpha:0];
+            CGFloat duration = JTSImageViewController_TransitionAnimationDuration;
+            if (USE_DEBUG_SLOW_ANIMATIONS == 1) {
+                duration *= 4;
             }
             
-            BOOL mustRotateDuringTransition = (weakSelf.interfaceOrientation != _startingInfo.startingInterfaceOrientation);
-            if (mustRotateDuringTransition) {
-                CGRect newEndingRect;
-                CGPoint centerInRect;
-                if (_startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation) {
-                    CGRect rectToConvert = _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation;
-                    CGRect rectForCentering = [weakSelf.snapshotView convertRect:rectToConvert toView:weakSelf.view];
-                    centerInRect = CGPointMake(rectForCentering.origin.x+rectForCentering.size.width/2.0f,
-                                               rectForCentering.origin.y+rectForCentering.size.height/2.0f);
-                    newEndingRect = _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation;
-                } else {
-                    newEndingRect = _startingInfo.startingReferenceFrameForThumbnail;
-                    CGRect rectForCentering = [weakSelf.snapshotView convertRect:_startingInfo.startingReferenceFrameForThumbnail toView:weakSelf.view];
-                    centerInRect = CGPointMake(rectForCentering.origin.x+rectForCentering.size.width/2.0f,
-                                               rectForCentering.origin.y+rectForCentering.size.height/2.0f);
-                }
-                [weakSelf.imageView setFrame:newEndingRect];
-                weakSelf.imageView.transform = weakSelf.currentSnapshotRotationTransform;
-                [weakSelf.imageView setCenter:centerInRect];
-            } else {
-                if (_startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation) {
-                    [weakSelf.imageView setFrame:_startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation];
-                } else {
-                    [weakSelf.imageView setFrame:_startingInfo.startingReferenceFrameForThumbnail];
+            [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut animations:^{
+                
+                weakSelf.snapshotView.transform = weakSelf.currentSnapshotRotationTransform;
+                [weakSelf removeMotionEffectsFromSnapshotView];
+                [weakSelf.blackBackdrop setAlpha:0];
+                
+                if (weakSelf.backgroundStyle == JTSImageViewControllerBackgroundStyle_ScaledDimmedBlurred) {
+                    [weakSelf.blurredSnapshotView setAlpha:0];
                 }
                 
-                // Rotation not needed, so fade the status bar back in. Looks nicer.
-                if ([UIApplication sharedApplication].jts_usesViewControllerBasedStatusBarAppearance) {
-                    [weakSelf setNeedsStatusBarAppearanceUpdate];
+                BOOL mustRotateDuringTransition = (weakSelf.interfaceOrientation != _startingInfo.startingInterfaceOrientation);
+                if (mustRotateDuringTransition) {
+                    CGRect newEndingRect;
+                    CGPoint centerInRect;
+                    if (_startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation) {
+                        CGRect rectToConvert = _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation;
+                        CGRect rectForCentering = [weakSelf.snapshotView convertRect:rectToConvert toView:weakSelf.view];
+                        centerInRect = CGPointMake(rectForCentering.origin.x+rectForCentering.size.width/2.0f,
+                                                   rectForCentering.origin.y+rectForCentering.size.height/2.0f);
+                        newEndingRect = _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation;
+                    } else {
+                        newEndingRect = _startingInfo.startingReferenceFrameForThumbnail;
+                        CGRect rectForCentering = [weakSelf.snapshotView convertRect:_startingInfo.startingReferenceFrameForThumbnail toView:weakSelf.view];
+                        centerInRect = CGPointMake(rectForCentering.origin.x+rectForCentering.size.width/2.0f,
+                                                   rectForCentering.origin.y+rectForCentering.size.height/2.0f);
+                    }
+                    [weakSelf.imageView setFrame:newEndingRect];
+                    weakSelf.imageView.transform = weakSelf.currentSnapshotRotationTransform;
+                    [weakSelf.imageView setCenter:centerInRect];
                 } else {
-                    [[UIApplication sharedApplication] setStatusBarHidden:_startingInfo.statusBarHiddenPriorToPresentation
-                                                            withAnimation:UIStatusBarAnimationFade];
+                    if (_startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation) {
+                        [weakSelf.imageView setFrame:_startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation];
+                    } else {
+                        [weakSelf.imageView setFrame:_startingInfo.startingReferenceFrameForThumbnail];
+                    }
+                    
+                    // Rotation not needed, so fade the status bar back in. Looks nicer.
+                    if ([UIApplication sharedApplication].jts_usesViewControllerBasedStatusBarAppearance) {
+                        [weakSelf setNeedsStatusBarAppearanceUpdate];
+                    } else {
+                        [[UIApplication sharedApplication] setStatusBarHidden:_startingInfo.statusBarHiddenPriorToPresentation
+                                                                withAnimation:UIStatusBarAnimationFade];
+                    }
                 }
-            }
-        } completion:^(BOOL finished) {
-            
-            // Needed if dismissing from a different orientation then the one we started with
-            if ([UIApplication sharedApplication].jts_usesViewControllerBasedStatusBarAppearance == NO) {
-                [[UIApplication sharedApplication] setStatusBarHidden:_startingInfo.statusBarHiddenPriorToPresentation
-                                                        withAnimation:UIStatusBarAnimationNone];
-            }
-            
-            [weakSelf.presentingViewController dismissViewControllerAnimated:NO completion:^{
-                [weakSelf.dismissalDelegate imageViewerDidDismiss:weakSelf];
+            } completion:^(BOOL finished) {
+                
+                // Needed if dismissing from a different orientation then the one we started with
+                if ([UIApplication sharedApplication].jts_usesViewControllerBasedStatusBarAppearance == NO) {
+                    [[UIApplication sharedApplication] setStatusBarHidden:_startingInfo.statusBarHiddenPriorToPresentation
+                                                            withAnimation:UIStatusBarAnimationNone];
+                }
+                
+                [weakSelf.presentingViewController dismissViewControllerAnimated:NO completion:^{
+                    [weakSelf.dismissalDelegate imageViewerDidDismiss:weakSelf];
+                }];
             }];
-        }];
-    });
+        });
     });
 }
 
@@ -1361,6 +1377,13 @@ typedef struct {
     if (_flags.isAnimatingAPresentationOrDismissal == NO && _flags.isManuallyResizingTheScrollViewFrame == NO) {
         [self updateDimmingViewForCurrentZoomScale:YES];
     }
+    
+    BOOL pinchDismissalEnabled = (self.dismissalOptions & JTSImageViewControllerDismissalOption_Pinch) == JTSImageViewControllerDismissalOption_Pinch;
+    if (pinchDismissalEnabled) {
+        if (!scrollView.zooming && scrollView.zoomBouncing && scrollView.zoomScale <= 1.f) {
+            [self dismiss:YES];
+        }
+    }
 }
 
 - (void)scrollViewDidEndZooming:(UIScrollView *)scrollView withView:(UIView *)view atScale:(CGFloat)scale {
@@ -1645,32 +1668,32 @@ typedef struct {
 }
 
 #pragma mark - Accessibility
-         
- - (NSString *)accessibilityHintZoomedOut {
-     
-     NSString *hint = nil;
-     
-     if ([self.accessibilityDelegate respondsToSelector:@selector(accessibilityHintZoomedOutForImageViewer:)]) {
-         hint = [self.accessibilityDelegate accessibilityHintZoomedOutForImageViewer:self];
-     } else {
-         hint = [self defaultAccessibilityHintForScrollView:NO];
-     }
-     
-     return hint;
- }
-         
- - (NSString *)accessibilityHintZoomedIn {
-     
-     NSString *hint = nil;
-     
-     if ([self.accessibilityDelegate respondsToSelector:@selector(accessibilityHintZoomedInForImageViewer:)]) {
-         hint = [self.accessibilityDelegate accessibilityHintZoomedInForImageViewer:self];
-     } else {
-         hint = [self defaultAccessibilityHintForScrollView:YES];
-     }
-     
-     return hint;
- }
+
+- (NSString *)accessibilityHintZoomedOut {
+    
+    NSString *hint = nil;
+    
+    if ([self.accessibilityDelegate respondsToSelector:@selector(accessibilityHintZoomedOutForImageViewer:)]) {
+        hint = [self.accessibilityDelegate accessibilityHintZoomedOutForImageViewer:self];
+    } else {
+        hint = [self defaultAccessibilityHintForScrollView:NO];
+    }
+    
+    return hint;
+}
+
+- (NSString *)accessibilityHintZoomedIn {
+    
+    NSString *hint = nil;
+    
+    if ([self.accessibilityDelegate respondsToSelector:@selector(accessibilityHintZoomedInForImageViewer:)]) {
+        hint = [self.accessibilityDelegate accessibilityHintZoomedInForImageViewer:self];
+    } else {
+        hint = [self defaultAccessibilityHintForScrollView:YES];
+    }
+    
+    return hint;
+}
 
 - (NSString *)defaultAccessibilityLabelForScrollView {
     
@@ -1678,22 +1701,22 @@ typedef struct {
 }
 
 - (NSString *)defaultAccessibilityHintForScrollView:(BOOL)zoomedIn {
-
+    
     NSString *hint = nil;
     
     if (zoomedIn) {
         hint = @"\
-                Image is zoomed in. \
-                Pan around the image using three fingers. \
-                Double tap to dismiss this screen. \
-                Double tap and hold for more options. \
-                Triple tap the image to zoom out.";
+        Image is zoomed in. \
+        Pan around the image using three fingers. \
+        Double tap to dismiss this screen. \
+        Double tap and hold for more options. \
+        Triple tap the image to zoom out.";
     } else {
         hint = @"\
-                Image is zoomed out. \
-                Double tap to dismiss this screen. \
-                Double tap and hold for more options. \
-                Triple tap the image to zoom in.";
+        Image is zoomed out. \
+        Double tap to dismiss this screen. \
+        Double tap and hold for more options. \
+        Triple tap the image to zoom in.";
     }
     
     return hint;
