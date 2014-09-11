@@ -32,6 +32,7 @@ typedef struct {
     UIStatusBarStyle statusBarStylePriorToPresentation;
     CGRect startingReferenceFrameForThumbnail;
     CGRect startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation;
+    CGPoint startingReferenceCenterForThumbnail;
     UIInterfaceOrientation startingInterfaceOrientation;
     BOOL presentingViewControllerPresentedFromItsUnsupportedOrientation;
 } JTSImageViewControllerStartingInfo;
@@ -60,10 +61,10 @@ typedef struct {
 
 @interface JTSImageViewController ()
 <
-    UIScrollViewDelegate,
-    UITextViewDelegate,
-    UIViewControllerTransitioningDelegate,
-    UIGestureRecognizerDelegate
+UIScrollViewDelegate,
+UITextViewDelegate,
+UIViewControllerTransitioningDelegate,
+UIGestureRecognizerDelegate
 >
 
 // General Info
@@ -199,7 +200,49 @@ typedef struct {
 #pragma mark - UIViewController
 
 - (NSUInteger)supportedInterfaceOrientations {
-    return ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskAllButUpsideDown;
+    
+    /*
+     iOS 8 changes the behavior of autorotation when presenting a
+     modal view controller whose supported orientations outnumber
+     the orientations of the presenting view controller.
+     
+     E.g., when a portrait-only iPhone view controller presents
+     JTSImageViewController while the **device** is oriented in
+     landscape, on iOS 8 the modal view controller presents straight
+     into landscape, whereas on iOS 7 the interface orientation
+     of the presenting view controller is preserved.
+     
+     In my judgement the iOS 7 behavior is preferable. It also simplifies
+     the rotation corrections during presentation. - August 31, 2014 JTS.
+     */
+    
+    NSUInteger mask;
+    
+    if (self.flags.viewHasAppeared == NO) {
+        switch ([UIApplication sharedApplication].statusBarOrientation) {
+            case UIInterfaceOrientationLandscapeLeft:
+                mask = UIInterfaceOrientationMaskLandscapeLeft;
+                break;
+            case UIInterfaceOrientationLandscapeRight:
+                mask = UIInterfaceOrientationMaskLandscapeRight;
+                break;
+            case UIInterfaceOrientationPortrait:
+                mask = UIInterfaceOrientationMaskPortrait;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                mask = UIInterfaceOrientationMaskPortraitUpsideDown;
+                break;
+            default:
+                mask = UIInterfaceOrientationPortrait;
+                break;
+        }
+    }
+    else if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) {
+        mask = UIInterfaceOrientationMaskAll;
+    } else {
+        mask = UIInterfaceOrientationMaskAllButUpsideDown;
+    }
+    return mask;
 }
 
 - (BOOL)shouldAutorotate {
@@ -246,8 +289,8 @@ typedef struct {
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
-    if (self.lastUsedOrientation != self.interfaceOrientation) {
-        [self setLastUsedOrientation:self.interfaceOrientation];
+    if (self.lastUsedOrientation != [UIApplication sharedApplication].statusBarOrientation) {
+        self.lastUsedOrientation = [UIApplication sharedApplication].statusBarOrientation;
         _flags.rotationTransformIsDirty = YES;
         [self updateLayoutsForCurrentOrientation];
     }
@@ -330,8 +373,12 @@ typedef struct {
     self.scrollView.accessibilityHint = [self accessibilityHintZoomedOut];
     [self.view addSubview:self.scrollView];
     
-    self.imageView = [[UIImageView alloc] initWithFrame:self.view.bounds];
+    CGRect referenceFrameInWindow = [self.imageInfo.referenceView convertRect:self.imageInfo.referenceRect toView:nil];
+    CGRect referenceFrameInMyView = [self.view convertRect:referenceFrameInWindow fromView:nil];
+    
+    self.imageView = [[UIImageView alloc] initWithFrame:referenceFrameInMyView];
     self.imageView.contentMode = UIViewContentModeScaleAspectFill;
+    self.imageView.userInteractionEnabled = YES;
     self.imageView.isAccessibilityElement = NO;
     self.imageView.clipsToBounds = YES;
     
@@ -471,9 +518,9 @@ typedef struct {
     
     [self.view insertSubview:self.snapshotView atIndex:0];
     
-    _startingInfo.startingInterfaceOrientation = viewController.interfaceOrientation;
+    _startingInfo.startingInterfaceOrientation = [UIApplication sharedApplication].statusBarOrientation;
     
-    [self setLastUsedOrientation:viewController.interfaceOrientation];
+    self.lastUsedOrientation = [UIApplication sharedApplication].statusBarOrientation;
     CGRect referenceFrameInWindow = [self.imageInfo.referenceView convertRect:self.imageInfo.referenceRect toView:nil];
     
     _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation = [self.view convertRect:referenceFrameInWindow fromView:nil];
@@ -484,16 +531,17 @@ typedef struct {
     
     [viewController presentViewController:self animated:NO completion:^{
         
-        if (self.interfaceOrientation != _startingInfo.startingInterfaceOrientation) {
+        if ([UIApplication sharedApplication].statusBarOrientation != _startingInfo.startingInterfaceOrientation) {
             _startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation = YES;
         }
+        
         
         CGRect referenceFrameInMyView = [self.view convertRect:referenceFrameInWindow fromView:nil];
         _startingInfo.startingReferenceFrameForThumbnail = referenceFrameInMyView;
         [self.imageView setFrame:referenceFrameInMyView];
         [self updateScrollViewAndImageViewForCurrentMetrics];
         
-        BOOL mustRotateDuringTransition = (self.interfaceOrientation != _startingInfo.startingInterfaceOrientation);
+        BOOL mustRotateDuringTransition = ([UIApplication sharedApplication].statusBarOrientation != _startingInfo.startingInterfaceOrientation);
         if (mustRotateDuringTransition) {
             CGRect newStartingRect = [self.snapshotView convertRect:_startingInfo.startingReferenceFrameForThumbnail toView:self.view];
             [self.imageView setFrame:newStartingRect];
@@ -618,8 +666,8 @@ typedef struct {
     }
     
     [self.view insertSubview:self.snapshotView atIndex:0];
-    _startingInfo.startingInterfaceOrientation = viewController.interfaceOrientation;
-    [self setLastUsedOrientation:viewController.interfaceOrientation];
+    _startingInfo.startingInterfaceOrientation = [UIApplication sharedApplication].statusBarOrientation;
+    [self setLastUsedOrientation:[UIApplication sharedApplication].statusBarOrientation];
     CGRect referenceFrameInWindow = [self.imageInfo.referenceView convertRect:self.imageInfo.referenceRect toView:nil];
     _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation = [self.view convertRect:referenceFrameInWindow fromView:nil];
     
@@ -627,7 +675,7 @@ typedef struct {
     
     [viewController presentViewController:self animated:NO completion:^{
         
-        if (self.interfaceOrientation != _startingInfo.startingInterfaceOrientation) {
+        if ([UIApplication sharedApplication].statusBarOrientation != _startingInfo.startingInterfaceOrientation) {
             _startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation = YES;
         }
         
@@ -648,7 +696,7 @@ typedef struct {
         // or else the image view changes above won't be
         // committed prior to the animations below.
         dispatch_async(dispatch_get_main_queue(), ^{
-        
+            
             [UIView
              animateWithDuration:duration
              delay:0
@@ -707,8 +755,8 @@ typedef struct {
     }
     
     [self.view insertSubview:self.snapshotView atIndex:0];
-    _startingInfo.startingInterfaceOrientation = viewController.interfaceOrientation;
-    [self setLastUsedOrientation:viewController.interfaceOrientation];
+    _startingInfo.startingInterfaceOrientation = [UIApplication sharedApplication].statusBarOrientation;
+    self.lastUsedOrientation = [UIApplication sharedApplication].statusBarOrientation;
     CGRect referenceFrameInWindow = [self.imageInfo.referenceView convertRect:self.imageInfo.referenceRect toView:nil];
     _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation = [self.view convertRect:referenceFrameInWindow fromView:nil];
     
@@ -716,7 +764,7 @@ typedef struct {
     
     [viewController presentViewController:weakSelf animated:NO completion:^{
         
-        if (weakSelf.interfaceOrientation != _startingInfo.startingInterfaceOrientation) {
+        if ([UIApplication sharedApplication].statusBarOrientation != _startingInfo.startingInterfaceOrientation) {
             _startingInfo.presentingViewControllerPresentedFromItsUnsupportedOrientation = YES;
         }
         
@@ -741,7 +789,7 @@ typedef struct {
         // or else the image view changes above won't be
         // committed prior to the animations below.
         dispatch_async(dispatch_get_main_queue(), ^{
-        
+            
             [UIView
              animateWithDuration:duration
              delay:0
@@ -886,7 +934,7 @@ typedef struct {
                     [weakSelf.blurredSnapshotView setAlpha:0];
                 }
                 
-                BOOL mustRotateDuringTransition = (weakSelf.interfaceOrientation != _startingInfo.startingInterfaceOrientation);
+                BOOL mustRotateDuringTransition = ([UIApplication sharedApplication].statusBarOrientation != _startingInfo.startingInterfaceOrientation);
                 if (mustRotateDuringTransition) {
                     CGRect newEndingRect;
                     CGPoint centerInRect;
@@ -964,7 +1012,6 @@ typedef struct {
                                                     withAnimation:UIStatusBarAnimationFade];
         }
     } completion:^(BOOL finished) {
-        
         [weakSelf.presentingViewController dismissViewControllerAnimated:NO completion:^{
             [weakSelf.dismissalDelegate imageViewerDidDismiss:weakSelf];
         }];
@@ -983,7 +1030,7 @@ typedef struct {
     if (USE_DEBUG_SLOW_ANIMATIONS == 1) {
         duration *= 4;
     }
-
+    
     [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut animations:^{
         weakSelf.snapshotView.transform = weakSelf.currentSnapshotRotationTransform;
         [weakSelf removeMotionEffectsFromSnapshotView];
@@ -1028,7 +1075,7 @@ typedef struct {
     [self.textView removeFromSuperview];
     [self.textView setDelegate:nil];
     [self setTextView:nil];
-
+    
     [UIView animateWithDuration:duration delay:0 options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseInOut animations:^{
         weakSelf.snapshotView.transform = weakSelf.currentSnapshotRotationTransform;
         [weakSelf removeMotionEffectsFromSnapshotView];
@@ -1158,7 +1205,7 @@ typedef struct {
     CGAffineTransform transform = CGAffineTransformIdentity;
     
     if (_startingInfo.startingInterfaceOrientation == UIInterfaceOrientationPortrait) {
-        switch (self.interfaceOrientation) {
+        switch ([UIApplication sharedApplication].statusBarOrientation) {
             case UIInterfaceOrientationLandscapeLeft:
                 transform = CGAffineTransformMakeRotation(M_PI/2.0f);
                 break;
@@ -1176,7 +1223,7 @@ typedef struct {
         }
     }
     else if (_startingInfo.startingInterfaceOrientation == UIInterfaceOrientationPortraitUpsideDown) {
-        switch (self.interfaceOrientation) {
+        switch ([UIApplication sharedApplication].statusBarOrientation) {
             case UIInterfaceOrientationLandscapeLeft:
                 transform = CGAffineTransformMakeRotation(-M_PI/2.0f);
                 break;
@@ -1194,7 +1241,7 @@ typedef struct {
         }
     }
     else if (_startingInfo.startingInterfaceOrientation == UIInterfaceOrientationLandscapeLeft) {
-        switch (self.interfaceOrientation) {
+        switch ([UIApplication sharedApplication].statusBarOrientation) {
             case UIInterfaceOrientationLandscapeLeft:
                 transform = CGAffineTransformIdentity;
                 break;
@@ -1212,7 +1259,7 @@ typedef struct {
         }
     }
     else if (_startingInfo.startingInterfaceOrientation == UIInterfaceOrientationLandscapeRight) {
-        switch (self.interfaceOrientation) {
+        switch ([UIApplication sharedApplication].statusBarOrientation) {
             case UIInterfaceOrientationLandscapeLeft:
                 transform = CGAffineTransformMakeRotation(M_PI);
                 break;
@@ -1471,6 +1518,20 @@ typedef struct {
         if ([self.interactionsDelegate respondsToSelector:@selector(imageViewerDidLongPress:)]) {
             [self.interactionsDelegate imageViewerDidLongPress:self];
         }
+        
+        BOOL allowCopy = NO;
+        
+        if ([self.interactionsDelegate respondsToSelector:@selector(imageViewerAllowCopyToPasteboard:)]) {
+            allowCopy = [self.interactionsDelegate imageViewerAllowCopyToPasteboard:self];
+        }
+        
+        if (allowCopy) {
+            CGPoint location = [sender locationInView:self.imageView];
+            UIMenuController *menuController = [UIMenuController sharedMenuController];
+            
+            [menuController setTargetRect:CGRectMake(location.x, location.y, 0.0f, 0.0f) inView:self.imageView];
+            [menuController setMenuVisible:YES animated:YES];
+        }
     }
 }
 
@@ -1633,7 +1694,7 @@ typedef struct {
     if (shouldReceiveTouch && gestureRecognizer == self.panRecognizer) {
         shouldReceiveTouch = (self.scrollView.zoomScale == 1 && _flags.scrollViewIsAnimatingAZoom == NO);
     }
-
+    
     return shouldReceiveTouch;
 }
 
@@ -1665,6 +1726,28 @@ typedef struct {
         progress = self.imageDownloadDataTask.countOfBytesReceived / bytesExpected;
     }
     [self.progressView setProgress:progress];
+}
+
+#pragma mark - UIResponder
+
+- (BOOL)canBecomeFirstResponder {
+    
+    if (self.image) {
+        return YES;
+    }
+    return NO;
+}
+
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender {
+    
+    if (self.image && action == @selector(copy:)) {
+        return YES;
+    }
+    return NO;
+}
+
+- (void)copy:(id)sender {
+    [[UIPasteboard generalPasteboard] setImage:self.image];
 }
 
 #pragma mark - Accessibility
