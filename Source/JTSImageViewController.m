@@ -525,6 +525,10 @@ UIGestureRecognizerDelegate
     
     _startingInfo.startingReferenceFrameForThumbnailInPresentingViewControllersOriginalOrientation = [self.view convertRect:referenceFrameInWindow fromView:nil];
     
+    if (self.imageInfo.contentMode) {
+        self.imageView.contentMode = self.imageInfo.contentMode;
+    }
+    
     // This will be moved into the scroll view after
     // the transition finishes.
     [self.view addSubview:self.imageView];
@@ -1515,8 +1519,9 @@ UIGestureRecognizerDelegate
     }
     
     if (self.image && sender.state == UIGestureRecognizerStateBegan) {
-        if ([self.interactionsDelegate respondsToSelector:@selector(imageViewerDidLongPress:)]) {
-            [self.interactionsDelegate imageViewerDidLongPress:self];
+        if ([self.interactionsDelegate respondsToSelector:@selector(imageViewerDidLongPress:atRect:)]) {
+            CGPoint location = [sender locationInView:self.view];
+            [self.interactionsDelegate imageViewerDidLongPress:self atRect:CGRectMake(location.x, location.y, 0.0f, 0.0f)];
         }
         
         BOOL allowCopy = NO;
