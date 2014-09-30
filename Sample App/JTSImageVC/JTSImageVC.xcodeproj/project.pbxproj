@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		472FDE9A19DA4B68000C0864 /* Default-1136.png in Resources */ = {isa = PBXBuildFile; fileRef = 472FDE9919DA4B68000C0864 /* Default-1136.png */; };
+		47A333FF19D8F34A00F60031 /* Default-1334.png in Resources */ = {isa = PBXBuildFile; fileRef = 47A333FD19D8F34A00F60031 /* Default-1334.png */; };
+		47A3340019D8F34A00F60031 /* Default-2208.png in Resources */ = {isa = PBXBuildFile; fileRef = 47A333FE19D8F34A00F60031 /* Default-2208.png */; };
 		7F9A78FF18E754A7000CAA69 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7F9A78FE18E754A7000CAA69 /* Foundation.framework */; };
 		7F9A790118E754A7000CAA69 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7F9A790018E754A7000CAA69 /* CoreGraphics.framework */; };
 		7F9A790318E754A7000CAA69 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7F9A790218E754A7000CAA69 /* UIKit.framework */; };
@@ -42,6 +45,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		472FDE9919DA4B68000C0864 /* Default-1136.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-1136.png"; sourceTree = "<group>"; };
+		47A333FD19D8F34A00F60031 /* Default-1334.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-1334.png"; sourceTree = "<group>"; };
+		47A333FE19D8F34A00F60031 /* Default-2208.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-2208.png"; sourceTree = "<group>"; };
 		7F9A78FB18E754A7000CAA69 /* JTSImageVC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JTSImageVC.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7F9A78FE18E754A7000CAA69 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		7F9A790018E754A7000CAA69 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -137,6 +143,9 @@
 			children = (
 				7FE0848118E7C5C600F2F6B4 /* banecat.jpg */,
 				7FA8566619B2762F00913254 /* banecat-red.png */,
+				47A333FD19D8F34A00F60031 /* Default-1334.png */,
+				47A333FE19D8F34A00F60031 /* Default-2208.png */,
+				472FDE9919DA4B68000C0864 /* Default-1136.png */,
 				7F9A790D18E754A7000CAA69 /* JTSAppDelegate.h */,
 				7F9A790E18E754A7000CAA69 /* JTSAppDelegate.m */,
 				7F9A791018E754A7000CAA69 /* Main.storyboard */,
@@ -276,8 +285,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				472FDE9A19DA4B68000C0864 /* Default-1136.png in Resources */,
 				7FE0848218E7C5C600F2F6B4 /* banecat.jpg in Resources */,
 				7FA8566719B2762F00913254 /* banecat-red.png in Resources */,
+				47A3340019D8F34A00F60031 /* Default-2208.png in Resources */,
+				47A333FF19D8F34A00F60031 /* Default-1334.png in Resources */,
 				7F9A791718E754A7000CAA69 /* Images.xcassets in Resources */,
 				7F9A790918E754A7000CAA69 /* InfoPlist.strings in Resources */,
 				7F9A791218E754A7000CAA69 /* Main.storyboard in Resources */,
@@ -437,6 +449,7 @@
 				INFOPLIST_FILE = "JTSImageVC/JTSImageVC-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -451,6 +464,7 @@
 				INFOPLIST_FILE = "JTSImageVC/JTSImageVC-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				WARNING_CFLAGS = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
