@@ -11,6 +11,8 @@
 #import "JTSImageViewController.h"
 #import "JTSImageInfo.h"
 
+#define TRY_AN_ANIMATED_GIF 0
+
 @interface JTSViewController ()
 
 @end
@@ -34,7 +36,11 @@
     
     // Create image info
     JTSImageInfo *imageInfo = [[JTSImageInfo alloc] init];
+#if TRY_AN_ANIMATED_GIF == 1
+    imageInfo.imageURL = [NSURL URLWithString:@"http://media.giphy.com/media/O3QpFiN97YjJu/giphy.gif"];
+#else
     imageInfo.image = self.bigImageButton.image;
+#endif
     imageInfo.referenceRect = self.bigImageButton.frame;
     imageInfo.referenceView = self.bigImageButton.superview;
     imageInfo.referenceContentMode = self.bigImageButton.contentMode;
@@ -44,7 +50,7 @@
     JTSImageViewController *imageViewer = [[JTSImageViewController alloc]
                                            initWithImageInfo:imageInfo
                                            mode:JTSImageViewControllerMode_Image
-                                           backgroundStyle:JTSImageViewControllerBackgroundStyle_ScaledDimmed];
+                                           backgroundStyle:JTSImageViewControllerBackgroundOption_Scaled];
     
     // Present the view controller.
     [imageViewer showFromViewController:self transition:JTSImageViewControllerTransition_FromOriginalPosition];
